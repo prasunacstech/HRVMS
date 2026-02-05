@@ -9,6 +9,8 @@ import org.openqa.selenium.support.FindBy;
 import org.openqa.selenium.support.ui.ExpectedConditions;
 import org.openqa.selenium.support.ui.WebDriverWait;
 
+import utils.WaitUtils;
+
 public class LogoutPage extends BasePage {
 
 	public LogoutPage(WebDriver driver) {
@@ -29,6 +31,7 @@ public class LogoutPage extends BasePage {
 	WebElement assertLogin;
 
 	public void clickDropDownImg() {
+		WaitUtils.waitForLoaderToDisappear(driver);
 		WebDriverWait wait = new WebDriverWait(driver, Duration.ofSeconds(10));
 		wait.until(ExpectedConditions.elementToBeClickable(dropDownImg)).click();
 
