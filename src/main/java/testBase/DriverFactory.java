@@ -15,7 +15,10 @@ public class DriverFactory {
 
 	public static WebDriver initBrowser(String browser) {
 
-		boolean headless = Boolean.getBoolean("headless");
+		boolean headless = Boolean.parseBoolean(
+		        System.getProperty("headless", "false")
+		);
+
 
 		WebDriver webDriver;
 
@@ -24,9 +27,16 @@ public class DriverFactory {
 		case "chrome":
 			ChromeOptions chromeOptions = new ChromeOptions();
 			chromeOptions.setPageLoadStrategy(PageLoadStrategy.EAGER);
-			if (headless)
-				chromeOptions.addArguments("--headless=new");
-			chromeOptions.addArguments("--start-maximized");
+			if (headless) {
+	            chromeOptions.addArguments(
+	                    "--headless=new",
+	                    "--no-sandbox",
+	                    "--disable-dev-shm-usage",
+	                    "--window-size=1920,1080"
+	            );
+	        } else {
+	            chromeOptions.addArguments("--start-maximized");
+	        }
 			webDriver = new ChromeDriver(chromeOptions);
 			break;
 

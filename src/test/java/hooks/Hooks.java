@@ -26,35 +26,50 @@ import utils.ScreenshotUtil;
 
 public class Hooks {
 
-    @Before
-    public void setUp(Scenario scenario) {
-        // 1) Browser from system property (default chrome)
-        String browser = System.getProperty("browser", "chrome");
+	@Before
+	public void setUp(Scenario scenario) {
 
-        // 2) Initialize driver (ThreadLocal)
-        DriverFactory.initBrowser(browser);
+	    // Read environment (default = qa)
+	    String env = System.getProperty("env", "qa");
 
-        // 3) Validate URL from config and navigate
-        String appUrl = ConfigReader.get("appURL");
-        if (appUrl == null || appUrl.trim().isEmpty()) {
-            // fail fast with clear message
-            DriverFactory.quitDriver();
-            throw new RuntimeException("appURL is not defined in config.properties (key: appURL)");
-        }
-        WebDriver driver = DriverFactory.getDriver();
-        if (driver == null) {
-            throw new RuntimeException("WebDriver was not initialized by DriverFactory.initBrowser()");
-        }
-        driver.get(appUrl);
-        new WebDriverWait(driver, Duration.ofSeconds(30))
-        .until(ExpectedConditions
-            .visibilityOfElementLocated(By.tagName("body")));
+	    //  Read browser (default = chrome)
+	    String browser = System.getProperty("browser", "chrome");
 
-        // 4) Create thread-safe Extent test and store in ThreadLocal manager
-        ExtentTest test = ExtentManager.getExtent().createTest(scenario.getName());
-        ExtentTestManager.setTest(test);
-        test.log(Status.INFO, "Scenario started: " + scenario.getName());
-    }
+	    // Initialize WebDriver (ThreadLocal)
+	    DriverFactory.initBrowser(browser);
+
+	    WebDriver driver = DriverFactory.getDriver();
+	    if (driver == null) {
+	        throw new RuntimeException("WebDriver initialization failed");
+	    }
+
+	    //  Read app URL based on environment
+	    String appUrl = ConfigReader.get("appURL." + env);
+	    if (appUrl == null || appUrl.trim().isEmpty()) {
+	        DriverFactory.quitDriver();
+	        throw new RuntimeException(
+	            "appURL is not defined in config.properties for env: " + env
+	        );
+	    }
+
+	    // Navigate to application
+	    driver.get(appUrl);
+
+	    // Basic wait to ensure page load
+	    new WebDriverWait(driver, Duration.ofSeconds(30))
+	            .until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+
+	    // 7️⃣ Create Extent test (Thread-safe)
+	    ExtentTest test = ExtentManager.getExtent()
+	            .createTest(scenario.getName());
+	    ExtentTestManager.setTest(test);
+
+	    test.log(Status.INFO,
+	            "Scenario started: " + scenario.getName()
+	            + " | Env: " + env
+	            + " | Browser: " + browser);
+	}
+
 
     @After
     public void tearDown(Scenario scenario) {
