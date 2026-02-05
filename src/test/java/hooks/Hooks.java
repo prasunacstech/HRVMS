@@ -29,47 +29,42 @@ public class Hooks {
 	@Before
 	public void setUp(Scenario scenario) {
 
-	    // Read environment (default = qa)
-	    String env = System.getProperty("env", "qa");
+		// Read environment (default = qa)
+		String env = System.getProperty("env", "qa");
 
-	    //  Read browser (default = chrome)
-	    String browser = System.getProperty("browser", "chrome");
+		// Read browser (default = chrome)
+		String browser = System.getProperty("browser", "chrome");
 
-	    // Initialize WebDriver (ThreadLocal)
-	    DriverFactory.initBrowser(browser);
+		// Initialize WebDriver (ThreadLocal)
+		DriverFactory.initBrowser(browser);
 
-	    WebDriver driver = DriverFactory.getDriver();
-	    if (driver == null) {
-	        throw new RuntimeException("WebDriver initialization failed");
-	    }
+		WebDriver driver = DriverFactory.getDriver();
+		if (driver == null) {
+			throw new RuntimeException("WebDriver initialization failed");
+		}
 
-	    //  Read app URL based on environment
-	    String appUrl = ConfigReader.get("appURL." + env);
-	    if (appUrl == null || appUrl.trim().isEmpty()) {
-	        DriverFactory.quitDriver();
-	        throw new RuntimeException(
-	            "appURL is not defined in config.properties for env: " + env
-	        );
-	    }
+		// Read app URL based on environment
+		String appUrl = ConfigReader.get("appURL." + env);
+		if (appUrl == null || appUrl.trim().isEmpty()) {
+			DriverFactory.quitDriver();
+			throw new RuntimeException("appURL is not defined in config.properties for env: " + env);
+		}
 
-	    // Navigate to application
-	    driver.get(appUrl);
+		// Navigate to application
+		driver.get(appUrl);
 
-	    // Basic wait to ensure page load
-	    new WebDriverWait(driver, Duration.ofSeconds(30))
-	            .until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+		// Basic wait to ensure page load
+		new WebDriverWait(driver, Duration.ofSeconds(30))
+				.until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
 
-	    // 7️⃣ Create Extent test (Thread-safe)
-	    ExtentTest test = ExtentManager.getExtent()
-	            .createTest(scenario.getName());
-	    ExtentTestManager.setTest(test);
+		// 7️⃣ Create Extent test (Thread-safe)
+		ExtentTest test = ExtentManager.getExtent().createTest(scenario.getName());
+		ExtentTestManager.setTest(test);
 
-	    test.log(Status.INFO,
-	            "Scenario started: " + scenario.getName()
-	            + " | Env: " + env
-	            + " | Browser: " + browser);
+		test.log(Status.INFO, "Scenario started: " + scenario.getName() + " | Env: " + env + " | Browser: " + browser);
 	}
 
+	
 
    @After
 public void tearDown(Scenario scenario) {
@@ -123,5 +118,6 @@ public void tearDown(Scenario scenario) {
             System.err.println("Could not flush Extent report: " + e.getMessage());
         }
     }
+
 }
 
