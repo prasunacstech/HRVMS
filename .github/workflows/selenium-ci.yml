@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        browser: [chrome]
+        browser: [chrome, firefox]
         env: [qa]
 
     steps:
@@ -46,5 +46,6 @@ jobs:
         with:
           name: ExtentReport-${{ matrix.browser }}
           path: target
+
 
 
