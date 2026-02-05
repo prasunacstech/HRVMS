@@ -64,60 +64,54 @@ public class Hooks {
 		test.log(Status.INFO, "Scenario started: " + scenario.getName() + " | Env: " + env + " | Browser: " + browser);
 	}
 
-	
+	@After
+	public void tearDown(Scenario scenario) {
 
-   @After
-public void tearDown(Scenario scenario) {
+		WebDriver driver = DriverFactory.getDriver();
+		ExtentTest test = ExtentTestManager.getTest();
 
-    WebDriver driver = DriverFactory.getDriver();
-    ExtentTest test = ExtentTestManager.getTest();
+		try {
+			if (test == null) {
+				// This should never happen if @Before is correct
+				System.err.println("ExtentTest was null for scenario: " + scenario.getName());
+				return;
+			}
 
-    try {
-        if (test == null) {
-            // This should never happen if @Before is correct
-            System.err.println("ExtentTest was null for scenario: " + scenario.getName());
-            return;
-        }
+			if (scenario.isFailed()) {
 
-        if (scenario.isFailed()) {
+				test.fail("Scenario Failed: " + scenario.getName());
 
-            test.fail("Scenario Failed: " + scenario.getName());
+				if (driver != null) {
+					try {
+						String screenshotPath = ScreenshotUtil.takeScreenshot(driver, scenario.getName());
 
-            if (driver != null) {
-                try {
-                    String screenshotPath =
-                            ScreenshotUtil.takeScreenshot(driver, scenario.getName());
+						test.addScreenCaptureFromPath(screenshotPath);
 
-                    test.addScreenCaptureFromPath(screenshotPath);
+						byte[] bytes = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+						scenario.attach(bytes, "image/png", "Failure Screenshot");
 
-                    byte[] bytes =
-                            ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-                    scenario.attach(bytes, "image/png", "Failure Screenshot");
+					} catch (Exception e) {
+						test.warning("Screenshot capture failed: " + e.getMessage());
+					}
+				}
+			} else {
+				test.pass("Scenario Passed");
+			}
 
-                } catch (Exception e) {
-                    test.warning("Screenshot capture failed: " + e.getMessage());
-                }
-            }
-        } else {
-            test.pass("Scenario Passed");
-        }
+		} finally {
+			DriverFactory.quitDriver();
+			ExtentTestManager.unload();
+		}
+	}
 
-    } finally {
-        DriverFactory.quitDriver();
-        ExtentTestManager.unload();
-    }
-}
-
-
-    // Use Cucumber's AfterAll to flush report once per JVM
-    @AfterAll
-    public static void afterAll() {
-        try {
-            ExtentManager.getExtent().flush();
-        } catch (Exception e) {
-            System.err.println("Could not flush Extent report: " + e.getMessage());
-        }
-    }
+	// Use Cucumber's AfterAll to flush report once per JVM
+	@AfterAll
+	public static void afterAll() {
+		try {
+			ExtentManager.getExtent().flush();
+		} catch (Exception e) {
+			System.err.println("Could not flush Extent report: " + e.getMessage());
+		}
+	}
 
 }
-
