@@ -17,7 +17,5 @@ public class ExtentTestManager {
     public static void unload() {
         extentTest.remove();
     }
-}
 
 }
-
