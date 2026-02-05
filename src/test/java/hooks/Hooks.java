@@ -71,75 +71,48 @@ public class Hooks {
 	}
 
 
-    @After
-    public void tearDown(Scenario scenario) {
-        // Get driver and test for this thread
-        WebDriver driver = DriverFactory.getDriver();
-        ExtentTest test = ExtentTestManager.getTest();
+   @After
+public void tearDown(Scenario scenario) {
 
-        try {
-            if (test == null) {
-                // fallback: create a minimal test so we can still log
-                test = ExtentManager.getExtent().createTest(scenario.getName());
-                ExtentTestManager.setTest(test);
-            }
+    WebDriver driver = DriverFactory.getDriver();
+    ExtentTest test = ExtentTestManager.getTest();
 
-            if (scenario.isFailed()) {
-                // Take screenshot only if driver is available
-                String screenshotPath = null;
-                if (driver != null) {
-                    try {
-                        screenshotPath = ScreenshotUtil.takeScreenshot(driver, scenario.getName());
-                    } catch (Exception e) {
-                        // screenshot failed — log but continue
-                        test.warning("Screenshot capture failed: " + e.getMessage());
-                    }
-                } else {
-                    test.warning("Driver was null when attempting to take screenshot.");
-                }
-
-                // Attach screenshot to Extent if available
-                if (screenshotPath != null) {
-                    try {
-                        test.fail("Scenario Failed",
-                                MediaEntityBuilder.createScreenCaptureFromPath(screenshotPath).build());
-                    } catch (Exception e) {
-                        test.fail("Scenario Failed (screenshot attach failed): " + e.getMessage());
-                    }
-                } else {
-                    test.fail("Scenario Failed (no screenshot available)");
-                }
-
-                // Attach screenshot to Cucumber report (bytes) if possible
-                try {
-                    if (driver != null) {
-                        byte[] bytes = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-                        scenario.attach(bytes, "image/png", "Failure Screenshot");
-                    }
-                } catch (Exception e) {
-                    test.warning("Failed to attach screenshot to Cucumber report: " + e.getMessage());
-                }
-
-                // Log the exception message to Extent
-                if (scenario.getStatus() != null) {
-                    test.log(Status.FAIL, "Scenario failed: " + scenario.getStatus().name());
-                }
-            } else {
-                test.log(Status.PASS, "Scenario Passed");
-            }
-        } finally {
-            // always quit driver and unload thread-local test
-            try {
-                DriverFactory.quitDriver();
-            } catch (Exception e) {
-                // log to extent if available
-                if (ExtentTestManager.getTest() != null) {
-                    ExtentTestManager.getTest().warning("Error while quitting driver: " + e.getMessage());
-                }
-            }
-            ExtentTestManager.unload();
+    try {
+        if (test == null) {
+            // This should never happen if @Before is correct
+            System.err.println("ExtentTest was null for scenario: " + scenario.getName());
+            return;
         }
+
+        if (scenario.isFailed()) {
+
+            test.fail("Scenario Failed: " + scenario.getName());
+
+            if (driver != null) {
+                try {
+                    String screenshotPath =
+                            ScreenshotUtil.takeScreenshot(driver, scenario.getName());
+
+                    test.addScreenCaptureFromPath(screenshotPath);
+
+                    byte[] bytes =
+                            ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+                    scenario.attach(bytes, "image/png", "Failure Screenshot");
+
+                } catch (Exception e) {
+                    test.warning("Screenshot capture failed: " + e.getMessage());
+                }
+            }
+        } else {
+            test.pass("Scenario Passed");
+        }
+
+    } finally {
+        DriverFactory.quitDriver();
+        ExtentTestManager.unload();
     }
+}
+
 
     // Use Cucumber's AfterAll to flush report once per JVM
     @AfterAll
@@ -151,3 +124,4 @@ public class Hooks {
         }
     }
 }
+
