@@ -13,6 +13,7 @@ import io.cucumber.java.en.And;
 import io.cucumber.java.en.Then;
 import pageObjects.LogoutPage;
 import testBase.DriverFactory;
+import utils.WaitUtils;
 
 public class LogoutSteps {
 	
@@ -32,6 +33,7 @@ public class LogoutSteps {
 	
 	@And("the user clicks on image icon")
 	public void clickImgIcon() {
+		WaitUtils.waitForLoaderToDisappear(getDriver());
 		getLogoutPage().clickDropDownImg();
 	}
 	

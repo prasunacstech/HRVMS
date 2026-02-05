@@ -1,112 +1,153 @@
 package hooks;
 
-import org.openqa.selenium.OutputType;
-import org.openqa.selenium.TakesScreenshot;
-import org.openqa.selenium.WebDriver;
-import org.testng.annotations.AfterClass;
-
-import com.aventstack.extentreports.ExtentTest;
-import com.aventstack.extentreports.MediaEntityBuilder;
-import com.aventstack.extentreports.Status;
-
 import io.cucumber.java.After;
 import io.cucumber.java.AfterAll;
 import io.cucumber.java.Before;
 import io.cucumber.java.Scenario;
 import testBase.DriverFactory;
+
+import java.time.Duration;
+
+import org.openqa.selenium.By;
+import org.openqa.selenium.OutputType;
+import org.openqa.selenium.TakesScreenshot;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.support.ui.ExpectedConditions;
+import org.openqa.selenium.support.ui.WebDriverWait;
+
+import com.aventstack.extentreports.MediaEntityBuilder;
+import com.aventstack.extentreports.Status;
+import com.aventstack.extentreports.ExtentTest;
+
 import utils.ConfigReader;
 import utils.ExtentManager;
 import utils.ExtentTestManager;
 import utils.ScreenshotUtil;
 
 public class Hooks {
-	
-//	// private BaseClass base;
-//	 private WebDriver driver;
-//	 
-//	 @Before
-////	    public void setUp() {
-////	        String browser = System.getProperty("browser", "chrome");
-////	        BaseClass.initBrowser(browser);
-////	        driver = BaseClass.getDriver();
-////	    }
-//
-//	 
-//
-//	    @After
-//	    public void tearDown(Scenario scenario) {
-//
-//	        if (scenario.isFailed()) {
-//	            byte[] screenshot =
-//	                    ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
-//	            scenario.attach(screenshot, "image/png", scenario.getName());
-//	        }
-//
-//	        BaseClass.quitDriver();
-//	    }
-	
 
+	@Before
+	public void setUp(Scenario scenario) {
 
-    @Before
-    public void setUp(Scenario scenario) {
+	    // Read environment (default = qa)
+	    String env = System.getProperty("env", "qa");
 
-        // 1️⃣ Browser from system property
-        String browser = System.getProperty("browser", "chrome");
+	    //  Read browser (default = chrome)
+	    String browser = System.getProperty("browser", "chrome");
 
-        // 2️⃣ Initialize driver (ThreadLocal)
-        DriverFactory.initBrowser(browser);
+	    // Initialize WebDriver (ThreadLocal)
+	    DriverFactory.initBrowser(browser);
 
-        // 3️⃣ Open application
-        DriverFactory.getDriver().get(ConfigReader.get("appURL"));
+	    WebDriver driver = DriverFactory.getDriver();
+	    if (driver == null) {
+	        throw new RuntimeException("WebDriver initialization failed");
+	    }
 
-        // 4️⃣ Create Extent test (ThreadLocal)
-        ExtentTest test = ExtentManager.getExtent()
-                .createTest(scenario.getName());
+	    //  Read app URL based on environment
+	    String appUrl = ConfigReader.get("appURL." + env);
+	    if (appUrl == null || appUrl.trim().isEmpty()) {
+	        DriverFactory.quitDriver();
+	        throw new RuntimeException(
+	            "appURL is not defined in config.properties for env: " + env
+	        );
+	    }
 
-        ExtentTestManager.setTest(test);
+	    // Navigate to application
+	    driver.get(appUrl);
 
-        test.log(Status.INFO,
-                "Scenario started: " + scenario.getName());
-    }
+	    // Basic wait to ensure page load
+	    new WebDriverWait(driver, Duration.ofSeconds(30))
+	            .until(ExpectedConditions.presenceOfElementLocated(By.tagName("body")));
+
+	    // 7️⃣ Create Extent test (Thread-safe)
+	    ExtentTest test = ExtentManager.getExtent()
+	            .createTest(scenario.getName());
+	    ExtentTestManager.setTest(test);
+
+	    test.log(Status.INFO,
+	            "Scenario started: " + scenario.getName()
+	            + " | Env: " + env
+	            + " | Browser: " + browser);
+	}
+
 
     @After
     public void tearDown(Scenario scenario) {
-
+        // Get driver and test for this thread
         WebDriver driver = DriverFactory.getDriver();
         ExtentTest test = ExtentTestManager.getTest();
 
-        if (scenario.isFailed()) {
-
-            // 📸 Screenshot
-            String screenshotPath =
-                    ScreenshotUtil.takeScreenshot(driver, scenario.getName());
-
-            if (screenshotPath != null) {
-                test.fail("Scenario Failed",
-                        MediaEntityBuilder
-                                .createScreenCaptureFromPath(screenshotPath)
-                                .build());
-            } else {
-                test.fail("Scenario Failed (Screenshot not captured)");
+        try {
+            if (test == null) {
+                // fallback: create a minimal test so we can still log
+                test = ExtentManager.getExtent().createTest(scenario.getName());
+                ExtentTestManager.setTest(test);
             }
 
-            // Attach to Cucumber report
-            byte[] screenshot =
-                    ((TakesScreenshot) driver)
-                            .getScreenshotAs(OutputType.BYTES);
-            scenario.attach(screenshot, "image/png", "Failure Screenshot");
+            if (scenario.isFailed()) {
+                // Take screenshot only if driver is available
+                String screenshotPath = null;
+                if (driver != null) {
+                    try {
+                        screenshotPath = ScreenshotUtil.takeScreenshot(driver, scenario.getName());
+                    } catch (Exception e) {
+                        // screenshot failed — log but continue
+                        test.warning("Screenshot capture failed: " + e.getMessage());
+                    }
+                } else {
+                    test.warning("Driver was null when attempting to take screenshot.");
+                }
 
-        } else {
-            test.pass("Scenario Passed");
+                // Attach screenshot to Extent if available
+                if (screenshotPath != null) {
+                    try {
+                        test.fail("Scenario Failed",
+                                MediaEntityBuilder.createScreenCaptureFromPath(screenshotPath).build());
+                    } catch (Exception e) {
+                        test.fail("Scenario Failed (screenshot attach failed): " + e.getMessage());
+                    }
+                } else {
+                    test.fail("Scenario Failed (no screenshot available)");
+                }
+
+                // Attach screenshot to Cucumber report (bytes) if possible
+                try {
+                    if (driver != null) {
+                        byte[] bytes = ((TakesScreenshot) driver).getScreenshotAs(OutputType.BYTES);
+                        scenario.attach(bytes, "image/png", "Failure Screenshot");
+                    }
+                } catch (Exception e) {
+                    test.warning("Failed to attach screenshot to Cucumber report: " + e.getMessage());
+                }
+
+                // Log the exception message to Extent
+                if (scenario.getStatus() != null) {
+                    test.log(Status.FAIL, "Scenario failed: " + scenario.getStatus().name());
+                }
+            } else {
+                test.log(Status.PASS, "Scenario Passed");
+            }
+        } finally {
+            // always quit driver and unload thread-local test
+            try {
+                DriverFactory.quitDriver();
+            } catch (Exception e) {
+                // log to extent if available
+                if (ExtentTestManager.getTest() != null) {
+                    ExtentTestManager.getTest().warning("Error while quitting driver: " + e.getMessage());
+                }
+            }
+            ExtentTestManager.unload();
         }
-
-        DriverFactory.quitDriver();
-        ExtentTestManager.unload();
     }
-    
-    @AfterClass(alwaysRun = true)
+
+    // Use Cucumber's AfterAll to flush report once per JVM
+    @AfterAll
     public static void afterAll() {
-        ExtentManager.getExtent().flush();
+        try {
+            ExtentManager.getExtent().flush();
+        } catch (Exception e) {
+            System.err.println("Could not flush Extent report: " + e.getMessage());
+        }
     }
-
 }

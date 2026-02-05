@@ -28,7 +28,11 @@
 			<artifactId>cucumber-java</artifactId>
 			<version>7.33.0</version>
 		</dependency>
-
+		<dependency>
+			<groupId>io.cucumber</groupId>
+			<artifactId>cucumber-core</artifactId>
+			<version>7.33.0</version>
+		</dependency>
 		<dependency>
 			<groupId>org.testng</groupId>
 			<artifactId>testng</artifactId>
@@ -119,29 +123,60 @@
 				</configuration>
 			</plugin>
 		</plugins>
-	</build> <!--
-	Browser profiles -->
+	</build>
+	
+	
 	<profiles>
-		<profile>
-			<id>chrome-headless</id>
-			<properties>
-				<browser>chrome</browser>
-				<headless>true</headless>
-			</properties>
-		</profile>
-		<profile>
-			<id>firefox-headless</id>
-			<properties>
-				<browser>firefox</browser>
-				<headless>true</headless>
-			</properties>
-		</profile>
-		<profile>
-			<id>edge-headless</id>
-			<properties>
-				<browser>edge</browser>
-				<headless>true</headless>
-			</properties>
-		</profile>
-	</profiles>
+
+    <!-- ================= ENV PROFILES ================= -->
+
+    <profile>
+        <id>dev</id>
+        <properties>
+            <env>dev</env>
+        </properties>
+    </profile>
+
+    <profile>
+        <id>qa</id>
+        <properties>
+            <env>qa</env>
+        </properties>
+    </profile>
+
+    <profile>
+        <id>prod</id>
+        <properties>
+            <env>prod</env>
+        </properties>
+    </profile>
+
+    <!-- ================= BROWSER PROFILES ================= -->
+
+    <profile>
+        <id>chrome-headless</id>
+        <properties>
+            <browser>chrome</browser>
+            <headless>true</headless>
+        </properties>
+    </profile>
+
+    <profile>
+        <id>firefox-headless</id>
+        <properties>
+            <browser>firefox</browser>
+            <headless>true</headless>
+        </properties>
+    </profile>
+
+    <profile>
+        <id>edge-headless</id>
+        <properties>
+            <browser>edge</browser>
+            <headless>true</headless>
+        </properties>
+    </profile>
+
+</profiles>
+
 </project>
