@@ -3,11 +3,6 @@ package utils;
 import com.aventstack.extentreports.ExtentTest;
 
 public class ExtentTestManager {
-   package utils;
-
-import com.aventstack.extentreports.ExtentTest;
-
-public class ExtentTestManager {
 
     private static ThreadLocal<ExtentTest> extentTest = new ThreadLocal<>();
 
@@ -25,4 +20,5 @@ public class ExtentTestManager {
 }
 
 }
+
 
