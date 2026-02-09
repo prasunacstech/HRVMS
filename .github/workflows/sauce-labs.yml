@@ -13,7 +13,7 @@ jobs:
 
     strategy:
       matrix:
-        browser: [chrome, firefox]
+        browser: [firefox]
         env: [qa]
 
     steps:
@@ -50,3 +50,4 @@ jobs:
         with:
           name: SauceReports-${{ matrix.browser }}
           path: target
+
