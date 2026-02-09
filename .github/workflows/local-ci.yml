@@ -1,0 +1,53 @@
+name: Selenium Automation CI
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:   # manual trigger
+
+jobs:
+  selenium-tests:
+    timeout-minutes: 30
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        browser: [chrome, firefox]
+        env: [qa]
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Cache Maven dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2
+          key: maven-${{ hashFiles('**/pom.xml') }}
+          restore-keys: maven-
+
+      - name: Run Selenium Tests
+        run: |
+          mvn clean test \
+          -Dbrowser=${{ matrix.browser }} \
+          -Dheadless=true \
+          -Denv=${{ matrix.env }}
+
+      - name: Upload Extent Report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExtentReport-${{ matrix.browser }}
+          path: |
+            target/extent-reports
+            target/cucumber-reports
+
+
