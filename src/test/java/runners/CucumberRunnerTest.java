@@ -18,10 +18,11 @@ import io.cucumber.testng.CucumberOptions;
 @Listeners({listeners.RetryTransformer.class, listeners.TestListener.class})
 public class CucumberRunnerTest extends AbstractTestNGCucumberTests{
 	@Override
-	@DataProvider(parallel = true)
+	@DataProvider(parallel = false)
 	public Object[][] scenarios() {
 	    return super.scenarios();
 	}
 
 	
+
 }
